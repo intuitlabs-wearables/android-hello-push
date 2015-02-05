@@ -27,3 +27,24 @@ dependencies {
     compile files('libs/intuitwear-android-sdk-0.3.jar')
     compile files('libs/png-android-sdk-1.1.0.3.jar')
 }
+android.applicationVariants.all { variant ->
+    def name = variant.buildType.name
+
+    if (name.equalsIgnoreCase("debug")) {
+        return; // Skip debug builds.
+    }
+    task("generate${variant.name}Javadoc", type: Javadoc) {
+        description "Generates Javadoc for $variant.name."
+        source = variant.javaCompile.source
+        ext.androidJar = "${android.sdkDirectory}/platforms/${android.compileSdkVersion}/android.jar"
+        classpath = files(variant.javaCompile.classpath.files) + files(ext.androidJar)
+        exclude '**/internal/**'
+        failOnError false
+        options.memberLevel = JavadocMemberLevel.PRIVATE
+        options.links("http://docs.oracle.com/javase/7/docs/api/");
+        options.links("http://d.android.com/reference/");
+        options.bottom = "Copyright (c) 2015 - IntuitLabs. All rights reserved."
+        exclude '**/BuildConfig.java'
+        exclude '**/R.java'
+    }
+}
