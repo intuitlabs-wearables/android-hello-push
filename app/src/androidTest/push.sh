@@ -9,6 +9,6 @@ echo sender: $1
 echo users: $2 
 echo payload: `cat $3`
 
-curl --data "sender=$1&users=$2&payload=`cat $3`" http://intuitwear.intuitlabs.com/Sender/wearable/send
+curl --data "sender=$1&users=$2&payload=`cat $3`" http://intuitwear.intuitlabs.com/SenderD2D/wearable/send
 
 echo '..all done'
