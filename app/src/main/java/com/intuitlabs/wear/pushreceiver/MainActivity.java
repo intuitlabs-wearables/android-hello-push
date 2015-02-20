@@ -51,11 +51,13 @@ public class MainActivity extends Activity {
     /**
      * This is an example value. You will need to replace with your Google API's Project Number
      */
-    static final String GCM_PROJECT_NUMBER = "1024976853493"; //Todo replace with empty string before publishing into public github repo
+    static final String GCM_PROJECT_NUMBER = "655612697136"; //Todo replace with empty string before publishing into public github repo
     /**
      * This is an example value. You will need to replace with your PNG Sender ID
      */
-    static final String INTUIT_SENDER_ID = "91085311-58c4-4ad0-987c-03019cec72c7"; //Todo replace with empty string before publishing into public github repo
+    static final String INTUIT_SENDER_ID = "1e4ede5a-907b-497c-a9d3-5bb44a0f278b"; //Todo replace with empty string before publishing into public github repo
+
+
     /**
      * large text view, wrapped into a scroll container
      */

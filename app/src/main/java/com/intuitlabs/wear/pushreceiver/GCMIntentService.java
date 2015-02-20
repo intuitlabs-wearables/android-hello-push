@@ -34,8 +34,9 @@ import com.intuit.intuitwear.exceptions.IntuitWearException;
 import com.intuit.intuitwear.notifications.IWearAndroidNotificationSender;
 import com.intuit.intuitwear.notifications.IWearNotificationSender;
 import com.intuit.intuitwear.notifications.IWearNotificationType;
-import com.intuit.mobile.png.sdk.PushNotifications;
+import com.intuit.mobile.png.sdk.PushNotificationsV2;
 import com.intuit.mobile.png.sdk.UserTypeEnum;
+import com.intuit.mobile.png.sdk.callback.RegisterUserCallback;
 
 import java.lang.ref.WeakReference;
 
@@ -46,80 +47,88 @@ import java.lang.ref.WeakReference;
  * Server and also implement a few callbacks.
  */
 public class GCMIntentService extends GCMBaseIntentService {
+
     private static final String LOG_TAG = GCMIntentService.class.getSimpleName();
     private static final String MSG_KEY = GCMIntentService.class.getName() + "_MSG_KEY";
-
-    /**
-     * Handler that can display incoming messages, if the registered Activity is still around.
-     */
-    private static class MyHandler extends Handler {
-        //Using a weak reference means we won't prevent garbage collection
-        private final WeakReference<MainActivity> myClassWeakReference;
-
-        public MyHandler(final MainActivity myClassInstance) {
-            myClassWeakReference = new WeakReference<>(myClassInstance);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void handleMessage(final Message msg) {
-            MainActivity activity = myClassWeakReference.get();
-            if (activity != null && msg !=null) {
-                activity.showMessage(msg.getData().getString(MSG_KEY, ""));
-            }
-        }
-    }
+    private static final String REG_URL = "https://png.d2d.msg.intuit.com";
 
     private static MyHandler handler;
+    private static String userid;
+    private static String[] groups;
 
-    public static void setHandler(final MainActivity a) {
-        handler = new MyHandler(a);
-    }
-
-
-    /**
-     * This method triggers the main registration flow. It should be called each
-     * time the application is started to ensure the app stays in sync with the
-     * Push Notification servers.
-     *
-     * @param context         {@link android.content.Context} Android Context
-     * @param receiver_id     {@link String} Type of userId, represents intuit id, Mobile Number, Email, uniquely identifies the user
-     * @param receiver_groups {@link String[]} The groups to which the userId may belong, allowing for groups messages
-     */
-    protected static void register(final Context context,
-                                   final String receiver_id,
-                                   final String[] receiver_groups) {
-        PushNotifications.register(
-                context,
-                MainActivity.GCM_PROJECT_NUMBER,
-                receiver_id,
-                receiver_groups,
-                UserTypeEnum.OTHER,
-                MainActivity.INTUIT_SENDER_ID,
-                false);
-    }
-
-    /**
-     * Default Constructor, requires Google GCM PROJECT_NUMBER,
-     * which must be your GCM Project number and statically available.
-     */
     public GCMIntentService() {
         super(MainActivity.GCM_PROJECT_NUMBER);
     }
 
-
-    /*
-     * This callback method is invoked when GCM delivers a notification to the device.
-     *
-     * Assuming that the json encoded message is a valid (see IntuitWear JSONSchema) document,
-     * we acquire an instance of a {@link IWearNotificationSender.Factory} to create a NotificationSender,
-     * which will send the generated notification to the wearable device.
+    /**
+     * Register with GCM, which will eventually trigger {@link #onRegistered} to be called.
      *
      * @param context {@link Context} Application context
-     * @param intent {@link Intent} received with the push notification
+     * @param userid  {@link String} how your app refers to this user
+     * @param groups  {@link String[]} may be null
      */
+    public static void register(final Context context, String userid, final String[] groups) {
+        GCMIntentService.userid = userid;
+        GCMIntentService.groups = groups;
+
+        PushNotificationsV2.URL_OVERRIDE = REG_URL;
+        PushNotificationsV2.Environment environment = PushNotificationsV2.Environment.SANDBOX;
+        PushNotificationsV2.initialize(MainActivity.INTUIT_SENDER_ID, MainActivity.GCM_PROJECT_NUMBER, environment);
+        PushNotificationsV2.setLogging(true);
+        PushNotificationsV2.registerForGCMNotifications(context);
+    }
+
+    /**
+     * Handler which cann be used to display a message, in case this app is running and in teh foreground.
+     *
+     * @param a {@link MainActivity} activity, which provides the capability to show a message.
+     */
+    public static void setHandler(final MainActivity a) {
+        handler = new MyHandler(a);
+    }
+
+    /**
+     * Google will call this method, providing you a unique registrationId for this device.
+     * We recommended to save the registrationId to local preferences for later use.
+     * e.g. saveRegistrationId(registrationId);
+     *
+     * @param context        {@link Context} Application context
+     * @param registrationId {@link String} unique registrationId for this device
+     */
+    @Override
+    protected void onRegistered(final Context context, final String registrationId) {
+
+        PushNotificationsV2.registerUser(
+                this,
+                GCMIntentService.userid,
+                UserTypeEnum.OTHER,
+                GCMIntentService.groups,
+                registrationId,
+                new RegisterUserCallback() {
+
+
+                    @Override
+                    public void onUserRegistered() {
+                        Log.i(LOG_TAG, "Registration call to PNG servers was accepted");
+                    }
+
+                    @Override
+                    public void onError(String code, String description) {
+                        Log.i(LOG_TAG, String.format("Received error callback from PNG. Error code= %s, description= %s", code, description));
+                    }
+                });
+    }
+
+    /*
+ * This callback method is invoked when GCM delivers a notification to the device.
+ *
+ * Assuming that the json encoded message is a valid (see IntuitWear JSONSchema) document,
+ * we acquire an instance of a {@link IWearNotificationSender.Factory} to create a NotificationSender,
+ * which will send the generated notification to the wearable device.
+ *
+ * @param context {@link Context} Application context
+ * @param intent {@link Intent} received with the push notification
+ */
     @Override
     protected void onMessage(final Context context, final Intent intent) {
         Log.v(LOG_TAG, "Received onMessage call. Will now display a notification");
@@ -140,18 +149,6 @@ public class GCMIntentService extends GCMBaseIntentService {
             m.setData(b);
             handler.sendMessage(m);
         }
-    }
-
-
-    /*
-     * This callback method is invoked after a successful registration with GCM.
-     * Here we are passing the new registrationId to the PNG SDK.
-     * The SDK will send the registrationId along with any user and userGroup mappings to the PNG servers.
-     */
-    @Override
-    protected void onRegistered(final Context context, final String regId) {
-        Log.i(LOG_TAG, "Received onRegistered call. Updating the PNG servers.");
-        PushNotifications.updateServer(context, regId);
     }
 
     /**
@@ -175,5 +172,27 @@ public class GCMIntentService extends GCMBaseIntentService {
     protected void onUnregistered(final Context context, final String msg) {
         Log.i(LOG_TAG, "Received unregistered call");
     }
-}
 
+    /**
+     * Handler that can display incoming messages, if the registered Activity is still around.
+     */
+    private static class MyHandler extends Handler {
+        //Using a weak reference means we won't prevent garbage collection
+        private final WeakReference<MainActivity> myClassWeakReference;
+
+        public MyHandler(final MainActivity myClassInstance) {
+            myClassWeakReference = new WeakReference<>(myClassInstance);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void handleMessage(final Message msg) {
+            MainActivity activity = myClassWeakReference.get();
+            if (activity != null && msg != null) {
+                activity.showMessage(msg.getData().getString(MSG_KEY, ""));
+            }
+        }
+    }
+}
