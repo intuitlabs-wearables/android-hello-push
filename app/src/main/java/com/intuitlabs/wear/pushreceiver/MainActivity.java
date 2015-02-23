@@ -51,12 +51,11 @@ public class MainActivity extends Activity {
     /**
      * This is an example value. You will need to replace with your Google API's Project Number
      */
-    static final String GCM_PROJECT_NUMBER = "655612697136"; //Todo replace with empty string before publishing into public github repo
+    static final String GCM_PROJECT_NUMBER = ""; //Todo replace the empty string w/ your GCM Project Number
     /**
      * This is an example value. You will need to replace with your PNG Sender ID
      */
-    static final String INTUIT_SENDER_ID = "1e4ede5a-907b-497c-a9d3-5bb44a0f278b"; //Todo replace with empty string before publishing into public github repo
-
+    static final String INTUIT_SENDER_ID = ""; //Todo replace the empty string w/ your Intuit Sender ID
 
     /**
      * large text view, wrapped into a scroll container
@@ -71,6 +70,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         this.setContentView(R.layout.activity_main);
         mTV = (TextView) findViewById(R.id.textView);
+        // Todo come up w/ your own userid / usergroup schema
         GCMIntentService.register(this, "Donald Duck", new String[]{"Characters", "Disney"});
         GCMIntentService.setHandler(this);
     }
