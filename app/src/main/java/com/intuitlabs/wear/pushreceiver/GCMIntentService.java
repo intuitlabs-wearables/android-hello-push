@@ -119,16 +119,16 @@ public class GCMIntentService extends GCMBaseIntentService {
                 });
     }
 
-    /*
- * This callback method is invoked when GCM delivers a notification to the device.
- *
- * Assuming that the json encoded message is a valid (see IntuitWear JSONSchema) document,
- * we acquire an instance of a {@link IWearNotificationSender.Factory} to create a NotificationSender,
- * which will send the generated notification to the wearable device.
- *
- * @param context {@link Context} Application context
- * @param intent {@link Intent} received with the push notification
- */
+    /**
+     * This callback method is invoked when GCM delivers a notification to the device.
+     * <p/>
+     * Assuming that the json encoded message is a valid (see IntuitWear JSONSchema) document,
+     * we acquire an instance of a {@link IWearNotificationSender.Factory} to create a NotificationSender,
+     * which will send the generated notification to the wearable device.
+     *
+     * @param context {@link Context} Application context
+     * @param intent  {@link Intent} received with the push notification
+     */
     @Override
     protected void onMessage(final Context context, final Intent intent) {
         Log.v(LOG_TAG, "Received onMessage call. Will now display a notification");
@@ -139,7 +139,7 @@ public class GCMIntentService extends GCMBaseIntentService {
                     (IWearAndroidNotificationSender) iWearSender.createNotificationSender(IWearNotificationType.ANDROID, this, message);
             androidNotificationSender.sendNotification(this);
         } catch (IntuitWearException e) {
-            e.printStackTrace();
+            Log.e(LOG_TAG, e.toString());
         }
 
         if (handler != null) {
